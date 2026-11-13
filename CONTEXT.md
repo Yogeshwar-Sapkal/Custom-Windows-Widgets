@@ -27,3 +27,7 @@ _Avoid_: Zoom, scale, font size
 **Display options**:
 Global switches that apply to every Clock: 12-hour or 24-hour format, seconds shown or hidden, and offset-from-local shown or hidden (off by default).
 _Avoid_: Format settings, preferences
+
+**Day/night icon**:
+A sun or moon icon on a Clock showing whether it is daytime in that Clock's Zone. Sun from 06:00 to 18:00 Zone-local time, moon otherwise.
+_Avoid_: Daylight indicator, theme switch
