@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>World Clock</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="card">
+    <div id="fit"><div id="clocks"></div></div>
+
+    <div id="controls">
+      <button id="btn-add" class="icon-btn" title="Add clock" aria-label="Add clock">+</button>
+      <button id="btn-settings" class="icon-btn" title="Settings" aria-label="Settings">&#9881;</button>
+      <button id="btn-close" class="icon-btn" title="Quit" aria-label="Quit">&times;</button>
+    </div>
+
+    <div id="empty" hidden>No clocks yet. Press + to add one.</div>
+
+    <section id="search" class="panel" hidden>
+      <input id="search-input" type="text" placeholder="Search a city or country" autocomplete="off" spellcheck="false" />
+      <ul id="search-results"></ul>
+    </section>
+
+    <section id="settings" class="panel" hidden>
+      <label>Layout
+        <select id="opt-layout">
+          <option value="column">Column</option>
+          <option value="row">Row</option>
+          <option value="grid">2 &times; 2 grid</option>
+        </select>
+      </label>
+      <label>Clock size <span id="size-val"></span>
+        <input id="opt-size" type="range" min="14" max="120" step="1" />
+      </label>
+      <label>Background opacity
+        <input id="opt-opacity" type="range" min="0" max="100" step="1" />
+      </label>
+      <label class="check"><input id="opt-24h" type="checkbox" /> 24-hour format</label>
+      <label class="check"><input id="opt-seconds" type="checkbox" /> Show seconds</label>
+      <label class="check"><input id="opt-offset" type="checkbox" /> Show offset from local time</label>
+      <label class="check"><input id="opt-top" type="checkbox" /> Always on top</label>
+      <label class="check"><input id="opt-autostart" type="checkbox" /> Launch at login</label>
+    </section>
+  </div>
+
+  <script src="zones.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
