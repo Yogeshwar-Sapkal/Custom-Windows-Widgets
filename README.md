@@ -8,7 +8,7 @@ A personal world-clock widget for Windows 11, built with Tauri 2. See `CONTEXT.m
 - Up to 4 clocks, each for a city/time zone picked by searching a city or country (works offline).
 - Time, city, date and weekday, and a sun/moon icon (sun 06:00-18:00 local to that city).
 - Layout: column, row or 2x2 grid. Clock size slider; the layout also scales when you resize the window.
-- 12/24-hour, seconds and offset-from-local toggles; background opacity; window level (desktop, normal, always on top); launch at login.
+- 12/24-hour, seconds and offset-from-local toggles; background opacity; always-on-top; launch at login.
 - Tray icon with Show/Hide and Quit. Settings are saved between launches.
 
 ## Get the installer (no local setup)

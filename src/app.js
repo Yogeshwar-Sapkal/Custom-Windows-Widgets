@@ -39,7 +39,7 @@
     hour24: true,
     seconds: false,
     offset: false,
-    level: "desktop", // desktop | normal | top
+    alwaysOnTop: false,
   };
 
   function loadConfig() {
@@ -70,7 +70,7 @@
     settingsPanel: $("settings"),
     layout: $("opt-layout"), size: $("opt-size"), sizeVal: $("size-val"), opacity: $("opt-opacity"),
     h24: $("opt-24h"), seconds: $("opt-seconds"), offset: $("opt-offset"),
-    level: $("opt-level"), autostart: $("opt-autostart"),
+    top: $("opt-top"), autostart: $("opt-autostart"),
   };
 
   // ---- Time formatting ---------------------------------------------------
@@ -210,22 +210,8 @@
     document.documentElement.style.setProperty("--opacity", String(config.opacity / 100));
   }
 
-  // Window level: "desktop" keeps the widget behind every other window.
-  async function applyLevel() {
-    if (!appWindow) return;
-    const level = config.level;
-    try {
-      if (level === "top") {
-        await appWindow.setAlwaysOnBottom(false);
-        await appWindow.setAlwaysOnTop(true);
-      } else if (level === "desktop") {
-        await appWindow.setAlwaysOnTop(false);
-        await appWindow.setAlwaysOnBottom(true);
-      } else {
-        await appWindow.setAlwaysOnTop(false);
-        await appWindow.setAlwaysOnBottom(false);
-      }
-    } catch (_) { /* ignore */ }
+  async function applyAlwaysOnTop() {
+    if (appWindow) { try { await appWindow.setAlwaysOnTop(!!config.alwaysOnTop); } catch (_) {} }
   }
 
   function reflow(resizeWindow) {
@@ -331,7 +317,7 @@
     el.h24.checked = config.hour24;
     el.seconds.checked = config.seconds;
     el.offset.checked = config.offset;
-    el.level.value = config.level;
+    el.top.checked = config.alwaysOnTop;
   }
 
   function wire() {
@@ -358,13 +344,7 @@
     el.h24.addEventListener("change", () => { config.hour24 = el.h24.checked; saveConfig(); reflow(true); });
     el.seconds.addEventListener("change", () => { config.seconds = el.seconds.checked; saveConfig(); reflow(true); });
     el.offset.addEventListener("change", () => { config.offset = el.offset.checked; saveConfig(); reflow(true); });
-    el.level.addEventListener("change", () => { config.level = el.level.value; saveConfig(); applyLevel(); });
-    // Clicking the widget raises it; drop it back behind other windows when focus moves away.
-    if (appWindow && appWindow.onFocusChanged) {
-      appWindow.onFocusChanged(({ payload: focused }) => {
-        if (!focused && config.level === "desktop") applyLevel();
-      }).catch(() => {});
-    }
+    el.top.addEventListener("change", () => { config.alwaysOnTop = el.top.checked; saveConfig(); applyAlwaysOnTop(); });
 
     if (T && T.autostart) {
       T.autostart.isEnabled().then((on) => { el.autostart.checked = on; }).catch(() => {});
@@ -398,7 +378,7 @@
   applyStyle();
   syncSettingsUi();
   wire();
-  applyLevel();
+  applyAlwaysOnTop();
   renderClocks();
   requestAnimationFrame(() => (appWindow ? resizeWindowToContent() : fit()));
   scheduleTick();
