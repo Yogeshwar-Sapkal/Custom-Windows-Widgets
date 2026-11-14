@@ -31,6 +31,13 @@
           <option value="grid">2 &times; 2 grid</option>
         </select>
       </label>
+      <label>Window level
+        <select id="opt-level">
+          <option value="desktop">Desktop (behind other windows)</option>
+          <option value="normal">Normal</option>
+          <option value="top">Always on top</option>
+        </select>
+      </label>
       <label>Clock size <span id="size-val"></span>
         <input id="opt-size" type="range" min="14" max="120" step="1" />
       </label>
@@ -40,7 +47,6 @@
       <label class="check"><input id="opt-24h" type="checkbox" /> 24-hour format</label>
       <label class="check"><input id="opt-seconds" type="checkbox" /> Show seconds</label>
       <label class="check"><input id="opt-offset" type="checkbox" /> Show offset from local time</label>
-      <label class="check"><input id="opt-top" type="checkbox" /> Always on top</label>
       <label class="check"><input id="opt-autostart" type="checkbox" /> Launch at login</label>
     </section>
   </div>
