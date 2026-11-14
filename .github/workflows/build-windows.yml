@@ -3,6 +3,7 @@ name: Build Windows installer
 on:
   workflow_dispatch:
   push:
+    branches: ["claude/magical-gauss-82b2o7"]
     tags: ["v*"]
 
 jobs:
