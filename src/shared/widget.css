@@ -37,7 +37,7 @@ html, body {
 #fit { position: absolute; inset: 0; padding: 14px; overflow: hidden; }
 
 #controls {
-  position: absolute; top: 6px; right: 6px; display: flex; gap: 2px;
+  position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; z-index: 2;
   opacity: 0; transition: opacity 0.15s;
 }
 #card:hover #controls, #card:focus-within #controls { opacity: 1; }
@@ -49,7 +49,7 @@ html, body {
 .icon-btn:disabled { opacity: 0.35; cursor: default; }
 
 .panel {
-  position: absolute; top: 36px; right: 6px; width: min(260px, calc(100% - 12px));
+  position: absolute; z-index: 3; top: 36px; right: 6px; width: min(260px, calc(100% - 12px));
   max-height: calc(100% - 44px); overflow: auto;
   background: rgb(var(--bg)); border: 1px solid rgba(128, 128, 128, 0.35);
   border-radius: 8px; padding: 10px; font-size: 13px;
@@ -69,5 +69,5 @@ html, body {
 .results li.none { cursor: default; color: var(--fg-dim); }
 
 .note { color: var(--fg-dim); font-size: 12px; }
-.center-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--fg-dim); font-size: 13px; padding: 16px; text-align: center; }
+.center-msg { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; color: var(--fg-dim); font-size: 13px; padding: 16px; text-align: center; }
 .center-msg[hidden] { display: none; }

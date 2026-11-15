@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather</title>
+  <link rel="stylesheet" href="../../shared/widget.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="card">
+    <div id="fit">
+      <div id="weather" hidden>
+        <header>
+          <div id="loc"></div>
+          <div id="status" class="note"></div>
+        </header>
+
+        <section id="now">
+          <div id="now-icon"></div>
+          <div id="now-temp"></div>
+          <div id="now-meta">
+            <div id="now-text"></div>
+            <div id="now-feels" class="note"></div>
+            <div id="now-range" class="note"></div>
+          </div>
+        </section>
+
+        <section id="stats">
+          <div class="stat"><span class="k">Wind</span><span id="st-wind" class="v"></span></div>
+          <div class="stat"><span class="k" id="st-precip-k">Rain</span><span id="st-precip" class="v"></span></div>
+          <div class="stat"><span class="k">UV index</span><span id="st-uv" class="v"></span></div>
+          <div class="stat"><span class="k">Humidity</span><span id="st-hum" class="v"></span></div>
+        </section>
+
+        <section>
+          <h3>Next 24 hours</h3>
+          <div id="chart"></div>
+        </section>
+
+        <section>
+          <h3>Next 5 days</h3>
+          <div id="daily"></div>
+        </section>
+      </div>
+    </div>
+
+    <div id="controls">
+      <button id="btn-place" class="icon-btn" title="Change location" aria-label="Change location">&#128205;</button>
+      <button id="btn-refresh" class="icon-btn" title="Refresh" aria-label="Refresh">&#8635;</button>
+      <button id="btn-settings" class="icon-btn" title="Settings" aria-label="Settings">&#9881;</button>
+      <button id="btn-close" class="icon-btn" title="Hide (use the tray icon to show again)" aria-label="Hide">&times;</button>
+    </div>
+
+    <div id="message" class="center-msg" hidden></div>
+
+    <section id="search" class="panel" hidden>
+      <input id="search-input" type="text" placeholder="Search a city" autocomplete="off" spellcheck="false" />
+      <ul id="search-results" class="results"></ul>
+    </section>
+
+    <section id="settings" class="panel" hidden>
+      <label>Units
+        <select id="opt-units">
+          <option value="metric">Metric (&deg;C, km/h, mm)</option>
+          <option value="imperial">Imperial (&deg;F, mph, in)</option>
+        </select>
+      </label>
+      <label>Size <span id="size-val"></span>
+        <input id="opt-size" type="range" min="24" max="72" step="1" />
+      </label>
+      <label>Background opacity
+        <input id="opt-opacity" type="range" min="0" max="100" step="1" />
+      </label>
+      <label class="check"><input id="opt-24h" type="checkbox" /> 24-hour time</label>
+      <label class="check"><input id="opt-top" type="checkbox" /> Always on top</label>
+      <p class="note">Weather data by Open-Meteo. Updates every 30 minutes.</p>
+    </section>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

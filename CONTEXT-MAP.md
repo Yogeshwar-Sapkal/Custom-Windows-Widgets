@@ -6,6 +6,7 @@ One app (`Windows Widgets`) hosts several independent widgets. Each widget has i
 
 - [App](./CONTEXT.md): the shell that hosts widgets, the tray menu and app-wide settings
 - [World Clock](./src/widgets/world-clock/CONTEXT.md): clocks for up to four places around the world
+- [Weather](./src/widgets/weather/CONTEXT.md): current weather and short-term forecast for one place
 
 ## Relationships
 

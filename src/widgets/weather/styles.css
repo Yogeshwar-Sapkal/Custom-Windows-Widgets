@@ -1,0 +1,43 @@
+/* Weather specific styles (base look is in ../../shared/widget.css). */
+:root { --size: 44px; }
+
+#weather {
+  /* Everything is sized in em from the Size setting, so the whole widget scales. */
+  font-size: calc(var(--size) * 0.3);
+  width: 26em;
+  transform-origin: top left;
+}
+#weather[hidden] { display: none; }
+
+header { padding-right: 7em; min-height: 2.4em; }
+#loc { font-weight: 600; font-size: 1.15em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#status { min-height: 1.3em; }
+#status.warn { color: #e8a23b; }
+
+#now { display: flex; align-items: center; gap: 0.6em; margin: 0.2em 0 0.8em; }
+#now-icon { font-size: 3.4em; line-height: 1; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+#now-temp { font-size: 3.4em; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+#now-meta { font-size: 1em; min-width: 0; }
+#now-text { font-weight: 600; }
+
+#stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5em; margin-bottom: 0.9em; }
+.stat { background: rgba(128, 128, 128, 0.15); border-radius: 0.6em; padding: 0.5em 0.5em; display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.stat .k { color: var(--fg-dim); font-size: 0.85em; white-space: nowrap; }
+.stat .v { font-size: 0.95em; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+h3 { margin: 0 0 0.4em; font-size: 0.9em; font-weight: 600; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+section { margin-bottom: 0.9em; }
+
+#chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+#chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+#chart .area { fill: var(--accent); opacity: 0.12; }
+#chart .dot { fill: var(--accent); }
+#chart text { fill: var(--fg); font-size: 11px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+#chart text.hour { fill: var(--fg-dim); }
+
+.day { display: grid; grid-template-columns: 3em 2em 1fr auto; align-items: center; gap: 0.4em; padding: 0.25em 0; }
+.day .name { font-weight: 600; }
+.day .icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; font-size: 1.3em; }
+.day .rain { color: var(--fg-dim); font-size: 0.9em; }
+.day .range { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.day .range .lo { color: var(--fg-dim); }

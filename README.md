@@ -5,6 +5,7 @@ Personal desktop widgets for Windows 11, built with Tauri 2: one app, one tray i
 ## Widgets
 
 - **World Clock**: see below.
+- **Weather**: current temperature, feels-like, wind, rain/snow, UV index and humidity, a 24-hour temperature line and a 5-day outlook for one searched city. Data from [Open-Meteo](https://open-meteo.com) (no account or key). Metric or imperial, refreshes every 30 minutes, and keeps showing the last data (marked offline) if a refresh fails.
 
 The tray icon's menu shows or hides each widget, toggles launch at login, and quits. A widget's x button only hides it.
 
