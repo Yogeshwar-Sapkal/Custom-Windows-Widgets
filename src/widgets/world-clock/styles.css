@@ -1,0 +1,32 @@
+/* World Clock specific styles (base look is in ../../shared/widget.css). */
+:root { --size: 48px; }
+
+#clocks {
+  display: flex; gap: calc(var(--size) * 0.4);
+  width: max-content; height: max-content;
+  transform-origin: top left;
+}
+#clocks.column { flex-direction: column; }
+#clocks.row { flex-direction: row; }
+#clocks.grid { display: grid; grid-template-columns: repeat(2, auto); }
+
+.clock { display: flex; flex-direction: column; min-width: 0; }
+.clock .top { display: flex; align-items: center; gap: 0.4em; font-size: calc(var(--size) * 0.3); color: var(--fg-dim); }
+.clock .top svg { width: 1.1em; height: 1.1em; flex: none; }
+.clock .sun { color: #f5b800; }
+.clock .moon { color: #9db4ff; }
+.clock .city { font-weight: 600; white-space: nowrap; }
+.clock .time {
+  font-size: var(--size); line-height: 1.05; font-weight: 600;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.clock .time small { font-size: 0.4em; margin-left: 0.25em; font-weight: 500; color: var(--fg-dim); }
+.clock .sub { font-size: calc(var(--size) * 0.26); color: var(--fg-dim); white-space: nowrap; }
+
+.clock .remove {
+  margin-left: 0.3em; width: 1.4em; height: 1.4em; border: 0; border-radius: 50%; padding: 0;
+  background: rgba(128, 128, 128, 0.25); color: var(--fg); cursor: pointer; line-height: 1;
+  opacity: 0; transition: opacity 0.15s;
+}
+.clock:hover .remove, .clock .remove:focus-visible { opacity: 1; }
+.clock .remove:hover { background: rgba(200, 60, 60, 0.6); }

@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "label": "main",
+        "label": "world-clock",
         "title": "World Clock",
         "width": 260,
         "height": 190,
@@ -21,16 +21,52 @@
         "resizable": true,
         "shadow": false,
         "alwaysOnTop": false,
-        "skipTaskbar": false
+        "skipTaskbar": false,
+        "url": "widgets/world-clock/index.html"
+      },
+      {
+        "label": "weather",
+        "title": "Weather",
+        "width": 360,
+        "height": 560,
+        "minWidth": 200,
+        "minHeight": 200,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "shadow": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "url": "widgets/weather/index.html",
+        "visible": false
+      },
+      {
+        "label": "battery",
+        "title": "Battery",
+        "width": 300,
+        "height": 220,
+        "minWidth": 180,
+        "minHeight": 100,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "shadow": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "url": "widgets/battery/index.html",
+        "visible": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://api.open-meteo.com https://geocoding-api.open-meteo.com"
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

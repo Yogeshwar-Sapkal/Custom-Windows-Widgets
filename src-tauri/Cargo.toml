@@ -1,11 +1,11 @@
 [package]
-name = "world-clock"
+name = "windows-widgets"
 version = "0.1.0"
-description = "World clock desktop widget"
+description = "Personal Windows 11 desktop widgets"
 edition = "2021"
 
 [lib]
-name = "world_clock_lib"
+name = "widgets_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -17,6 +17,14 @@ tauri-plugin-autostart = "2"
 tauri-plugin-window-state = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Devices_DeviceAndDriverInstallation",
+  "Win32_Devices_Properties",
+  "Win32_System_Power",
+] }
 
 [profile.release]
 lto = true

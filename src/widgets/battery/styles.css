@@ -1,0 +1,26 @@
+/* Battery specific styles (base look is in ../../shared/widget.css). */
+:root { --size: 15px; --ok: #4cc26a; --mid: #e8a23b; --low: #e5534b; }
+
+#battery { font-size: var(--size); width: 18em; transform-origin: top left; }
+#battery[hidden] { display: none; }
+
+header { padding-right: 7em; margin-bottom: 0.6em; }
+#title { font-weight: 600; font-size: 1.1em; }
+#status { min-height: 1.3em; }
+#status.warn { color: #e8a23b; }
+
+.row { display: grid; grid-template-columns: 2em 1fr 6.2em; align-items: center; gap: 0.6em; padding: 0.45em 0; }
+.row.dim { opacity: 0.5; }
+.row.noread { grid-template-columns: 2em 1fr 1.2em; }
+.row .ico { font-size: 1.5em; text-align: center; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+.row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sub { color: var(--fg-dim); font-size: 0.85em; }
+.row .info { min-width: 0; }
+
+.level { display: flex; align-items: center; gap: 0.5em; justify-content: flex-end; }
+.bar { flex: 1; height: 0.55em; border-radius: 1em; background: rgba(128, 128, 128, 0.3); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 1em; background: var(--ok); }
+.bar.mid i { background: var(--mid); }
+.bar.low i { background: var(--low); }
+.pct { min-width: 2.6em; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pct.none { color: var(--fg-dim); font-weight: 400; }
