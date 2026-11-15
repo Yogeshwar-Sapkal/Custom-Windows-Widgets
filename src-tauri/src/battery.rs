@@ -45,10 +45,22 @@ pub struct BatteryReport {
     pub error: Option<String>,
 }
 
+/// Which kind of PnP node a reading came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeKind {
+    /// The device itself: `BTHENUM\DEV_<address>\...` or `BTHLE\DEV_<address>\...`.
+    Device,
+    /// A service node of a classic device, e.g. Hands-Free:
+    /// `BTHENUM\{0000111E-...}_..._VID&..\7&..&0&<address>_C00000000`.
+    /// Windows can keep the battery level here instead of on the device node.
+    Service,
+}
+
 /// One PnP node as read from Windows, before duplicates are merged.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawDevice {
     pub address: String,
+    pub kind: NodeKind,
     pub name: String,
     pub percent: Option<u8>,
     pub connected: Option<bool>,
@@ -96,14 +108,55 @@ pub fn address_from_instance_id(instance_id: &str) -> Option<String> {
     }
 }
 
+/// Work out which Bluetooth device a PnP node belongs to, and whether it is the device's own
+/// node or one of its service nodes. Returns `None` for anything else.
+pub fn classify_instance_id(instance_id: &str) -> Option<(String, NodeKind)> {
+    if let Some(address) = address_from_instance_id(instance_id) {
+        return Some((address, NodeKind::Device));
+    }
+    // Service nodes exist only under BTHENUM and end with `...&<address>_<hex suffix>`.
+    let upper = instance_id.to_ascii_uppercase();
+    let mut parts = upper.split('\\');
+    if parts.next()? != "BTHENUM" {
+        return None;
+    }
+    if !parts.next()?.starts_with('{') {
+        return None;
+    }
+    let tail = parts.next()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    let (_, last) = tail.rsplit_once('&')?;
+    let (address, suffix) = last.split_once('_')?;
+    let is_hex = |t: &str| !t.is_empty() && t.bytes().all(|b| b.is_ascii_hexdigit());
+    if address.len() == 12 && is_hex(address) && is_hex(suffix) {
+        Some((address.to_string(), NodeKind::Service))
+    } else {
+        None
+    }
+}
+
+/// Build a `RawDevice` from the values read off one PnP node (`None` if it is not a Bluetooth node).
+pub fn raw_from_node(
+    instance_id: &str,
+    name: String,
+    percent: Option<u8>,
+    connected: Option<bool>,
+) -> Option<RawDevice> {
+    let (address, kind) = classify_instance_id(instance_id)?;
+    Some(RawDevice { address, kind, name, percent, connected })
+}
+
 /// Merge the several PnP nodes one physical device can have into one entry per address.
 /// Prefers a node that has a battery reading, then one that is connected, and keeps the
-/// first non-empty name. Result is sorted: connected devices first, then by name.
+/// first non-empty name. Service nodes only contribute a battery level, and only to a
+/// device that has its own node. Result is sorted: connected devices first, then by name.
 pub fn merge_devices(raw: Vec<RawDevice>) -> Vec<BluetoothDevice> {
     use std::collections::BTreeMap;
     let mut by_address: BTreeMap<String, BluetoothDevice> = BTreeMap::new();
 
-    for r in raw {
+    for r in raw.iter().filter(|r| r.kind == NodeKind::Device) {
         let entry = by_address.entry(r.address.clone()).or_insert_with(|| BluetoothDevice {
             id: r.address.clone(),
             name: String::new(),
@@ -121,6 +174,15 @@ pub fn merge_devices(raw: Vec<RawDevice>) -> Vec<BluetoothDevice> {
             (Some(false), _) | (_, Some(false)) => Some(false),
             _ => None,
         };
+    }
+
+    // Classic devices such as speakers keep the level on a service node (e.g. Hands-Free).
+    for r in raw.iter().filter(|r| r.kind == NodeKind::Service) {
+        if let Some(entry) = by_address.get_mut(&r.address) {
+            if entry.percent.is_none() {
+                entry.percent = r.percent.filter(|p| *p <= 100);
+            }
+        }
     }
 
     let mut devices: Vec<BluetoothDevice> = by_address
@@ -161,7 +223,7 @@ pub fn read_report() -> BatteryReport {
 
 #[cfg(windows)]
 mod win {
-    use super::{address_from_instance_id, pc_from_status, PcBattery, RawDevice};
+    use super::{classify_instance_id, pc_from_status, raw_from_node, PcBattery, RawDevice};
     use windows::core::{GUID, PCWSTR};
     use windows::Win32::Devices::DeviceAndDriverInstallation::{
         SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
@@ -238,14 +300,15 @@ mod win {
             index += 1;
 
             let Some(instance_id) = instance_id(&set, &data) else { continue };
-            let Some(address) = address_from_instance_id(&instance_id) else { continue };
+            // Skip nodes that are not Bluetooth devices or their service nodes.
+            if classify_instance_id(&instance_id).is_none() { continue }
 
             let name = string_prop(&set, &data, &FRIENDLY_NAME)
                 .or_else(|| string_prop(&set, &data, &DEVICE_DESC))
                 .unwrap_or_default();
             let percent = byte_prop(&set, &data, &BATTERY);
             let connected = byte_prop(&set, &data, &IS_CONNECTED).map(|b| b != 0);
-            out.push(RawDevice { address, name, percent, connected });
+            out.extend(raw_from_node(&instance_id, name, percent, connected));
         }
         Ok(out)
     }
@@ -290,7 +353,7 @@ mod tests {
     use super::*;
 
     fn raw(addr: &str, name: &str, pct: Option<u8>, conn: Option<bool>) -> RawDevice {
-        RawDevice { address: addr.into(), name: name.into(), percent: pct, connected: conn }
+        RawDevice { address: addr.into(), kind: NodeKind::Device, name: name.into(), percent: pct, connected: conn }
     }
 
     #[test]
@@ -362,6 +425,77 @@ mod tests {
     fn nameless_devices_get_a_label_and_bad_percent_is_dropped() {
         let merged = merge_devices(vec![raw("D4D4D4D4D4D4", "  ", Some(200), Some(false))]);
         assert_eq!(merged[0].name, "Bluetooth device D4D4");
+        assert_eq!(merged[0].percent, None);
+    }
+
+    // ---- Captured from a real PC (PnP entries Windows reported while the devices were connected).
+    // (instance id, friendly name, battery byte, IsConnected)
+    type Node = (&'static str, &'static str, Option<u8>, Option<bool>);
+    const CAPTURED: [Node; 8] = [
+        // OontZ speaker (classic Bluetooth): the level is on the Hands-Free service node, not the device node.
+        (r"BTHENUM\DEV_19D7D47C3B3B\7&6540B43&0&BLUETOOTHDEVICE_19D7D47C3B3B", "OontZ Angle 3 DS 131", None, Some(true)),
+        (r"BTHENUM\{0000111E-0000-1000-8000-00805F9B34FB}_HCIBYPASS_VID&000105D6_PID&000A\7&6540B43&0&19D7D47C3B3B_C00000000", "OontZ Angle 3 DS 131 Hands-Free AG", Some(70), None),
+        (r"BTHENUM\{0000110E-0000-1000-8000-00805F9B34FB}_VID&000105D6_PID&000A\7&6540B43&0&19D7D47C3B3B_C00000000", "OontZ Angle 3 DS 131 Avrcp Transport", None, None),
+        (r"BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_VID&000105D6_PID&000A\7&6540B43&0&19D7D47C3B3B_C00000000", "OontZ Angle 3 DS 131", None, None),
+        // Galaxy Buds4 Pro: one classic entry (not connected) and two low-energy entries that report levels.
+        (r"BTHENUM\DEV_A8D162CFBC6F\7&6540B43&0&BLUETOOTHDEVICE_A8D162CFBC6F", "Yogeshwar's Buds4 Pro", None, Some(false)),
+        (r"BTHLE\DEV_A8D162CF9073\7&267B7C&0&A8D162CF9073", "Yogeshwar's Buds4 Pro", Some(100), Some(true)),
+        (r"BTHLE\DEV_60C1EBFEEE16\7&267B7C&0&60C1EBFEEE16", "Yogeshwar's Buds4 Pro", Some(100), Some(true)),
+        // Not a Bluetooth entry at all: must be ignored.
+        (r"SWD\MMDEVAPI\{0.0.0.00000000}.{18AAC99A-CBA5-483F-9D62-821FDD013F9F}", "Headphones (OontZ Angle 3 DS 131)", None, None),
+    ];
+
+    /// What the Windows scan does with each entry (it calls the same `raw_from_node`).
+    fn scan(nodes: &[Node]) -> Vec<RawDevice> {
+        nodes
+            .iter()
+            .filter_map(|(id, name, percent, connected)| raw_from_node(id, name.to_string(), *percent, *connected))
+            .collect()
+    }
+
+    #[test]
+    fn captured_speaker_level_comes_from_its_hands_free_node() {
+        let devices = merge_devices(scan(&CAPTURED));
+        let oontz = devices.iter().find(|d| d.id == "19D7D47C3B3B").expect("speaker is listed");
+        assert_eq!(oontz.name, "OontZ Angle 3 DS 131", "name comes from the device node, not a service node");
+        assert_eq!(oontz.connected, Some(true));
+        assert_eq!(oontz.percent, Some(70), "Windows Settings shows 70%");
+    }
+
+    #[test]
+    fn captured_buds_are_unchanged() {
+        let devices = merge_devices(scan(&CAPTURED));
+        let buds: Vec<_> = devices.iter().filter(|d| d.name.contains("Buds4")).collect();
+        assert_eq!(buds.len(), 3, "classic entry plus two low-energy entries, as before");
+        assert_eq!(buds.iter().filter(|d| d.percent == Some(100)).count(), 2);
+        assert_eq!(devices.len(), 4, "service nodes and audio endpoints never become devices of their own");
+    }
+
+    #[test]
+    fn service_nodes_are_classified_by_address() {
+        let hfp = CAPTURED[1].0;
+        assert_eq!(classify_instance_id(hfp), Some(("19D7D47C3B3B".to_string(), NodeKind::Service)));
+        assert_eq!(classify_instance_id(CAPTURED[0].0), Some(("19D7D47C3B3B".to_string(), NodeKind::Device)));
+        assert_eq!(classify_instance_id(CAPTURED[5].0), Some(("A8D162CF9073".to_string(), NodeKind::Device)));
+        // not Bluetooth, no address, wrong bus, address too short, extra path segment
+        assert_eq!(classify_instance_id(CAPTURED[7].0), None);
+        assert_eq!(classify_instance_id(r"BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_VID&0001004C\7&1&0&x"), None);
+        assert_eq!(classify_instance_id(r"BTHLE\{0000110B-0000-1000-8000-00805F9B34FB}_VID&1\7&1&0&19D7D47C3B3B_C00000000"), None);
+        assert_eq!(classify_instance_id(r"BTHENUM\{0000111E-0000-1000-8000-00805F9B34FB}_X\7&1&0&19D7D4_C00000000"), None);
+        assert_eq!(classify_instance_id(r"BTHENUM\{0000111E-0000-1000-8000-00805F9B34FB}_X\a\7&1&0&19D7D47C3B3B_C00000000"), None);
+    }
+
+    #[test]
+    fn a_service_node_never_creates_a_device_or_overrides_a_level() {
+        let service = |addr: &str, pct| RawDevice { address: addr.into(), kind: NodeKind::Service, name: "svc".into(), percent: pct, connected: Some(false) };
+        // service node alone (no device node): no device appears
+        assert!(merge_devices(vec![service("A1A1A1A1A1A1", Some(50))]).is_empty());
+        // device already has its own level: the service node does not replace it, name and connection stay
+        let merged = merge_devices(vec![service("B2B2B2B2B2B2", Some(10)), raw("B2B2B2B2B2B2", "Mouse", Some(80), Some(true))]);
+        assert_eq!(merged.len(), 1);
+        assert_eq!((merged[0].name.as_str(), merged[0].percent, merged[0].connected), ("Mouse", Some(80), Some(true)));
+        // out-of-range service level is dropped
+        let merged = merge_devices(vec![raw("C3C3C3C3C3C3", "Speaker", None, Some(true)), service("C3C3C3C3C3C3", Some(250))]);
         assert_eq!(merged[0].percent, None);
     }
 
