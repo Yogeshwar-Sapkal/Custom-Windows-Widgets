@@ -39,6 +39,22 @@
         "skipTaskbar": false,
         "url": "widgets/weather/index.html",
         "visible": false
+      },
+      {
+        "label": "battery",
+        "title": "Battery",
+        "width": 300,
+        "height": 220,
+        "minWidth": 180,
+        "minHeight": 100,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "shadow": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "url": "widgets/battery/index.html",
+        "visible": false
       }
     ],
     "security": {

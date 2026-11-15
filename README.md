@@ -9,6 +9,8 @@ Personal desktop widgets for Windows 11, built with Tauri 2: one app, one tray i
 
 The tray icon's menu shows or hides each widget, toggles launch at login, and quits. A widget's x button only hides it.
 
+- **Battery**: this PC's battery (percent, charging, time left) plus paired Bluetooth devices that report a level to Windows. Devices that report nothing are shown as "battery not reported". Phone Link has no public interface, so a phone appears only if it is paired over Bluetooth *and* Windows reports its battery. Windows-only; refreshes every 2 minutes.
+
 ### World Clock features
 
 - Floating, frameless, translucent desktop widget (drag it by its background).

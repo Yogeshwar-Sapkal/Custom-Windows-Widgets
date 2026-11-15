@@ -1,3 +1,5 @@
+mod battery;
+
 use std::{collections::HashMap, sync::Mutex};
 
 use tauri::{
@@ -60,6 +62,18 @@ fn sync_tray(app: AppHandle) {
     sync_tray_items(&app);
 }
 
+/// Battery levels for this PC and paired Bluetooth devices (read off the UI thread).
+#[tauri::command]
+async fn get_batteries() -> battery::BatteryReport {
+    tauri::async_runtime::spawn_blocking(battery::read_report)
+        .await
+        .unwrap_or_else(|_| battery::BatteryReport {
+            supported: true,
+            error: Some("battery scan stopped unexpectedly".into()),
+            ..Default::default()
+        })
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
@@ -68,7 +82,7 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(TrayState::default())
-        .invoke_handler(tauri::generate_handler![hide_widget, sync_tray])
+        .invoke_handler(tauri::generate_handler![hide_widget, sync_tray, get_batteries])
         .setup(|app| {
             let handle = app.handle();
             let menu = Menu::new(handle)?;
