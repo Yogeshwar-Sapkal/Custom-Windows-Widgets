@@ -67,6 +67,7 @@ export function parseForecast(json, now = Date.now()) {
   const hours = [];
   for (let i = start; i < Math.min(start + HOURS_SHOWN, h.time.length); i++) {
     hours.push({
+      date: h.time[i].slice(0, 10),
       hour: Number(h.time[i].slice(11, 13)),
       temp: h.temperature_2m[i],
       code: h.weather_code[i],

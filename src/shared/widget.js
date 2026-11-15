@@ -55,8 +55,13 @@ export function createPanels(...panels) {
   return { closeAll, toggle };
 }
 
-// ---- Fit: scale content to the window, resize window to content --------
-export function createFit({ fitEl, contentEl, hasContent = () => true }) {
+// ---- Fit: scale content to the window, size the window to content -----
+// The window keeps whatever size the user gives it. It is sized to its content only
+//  - the first time it ever has content (`autoSizeOnce`), and
+//  - when the user changes a setting that changes the content's size (`resizeWindowToContent`).
+// Data refreshes and app launches must never call `resizeWindowToContent`, or they would
+// overwrite the size the user chose (and the size Tauri restores at launch).
+export function createFit({ fitEl, contentEl, hasContent = () => true, sizedKey = null }) {
   function natural() {
     contentEl.style.transform = "none";
     return { w: contentEl.offsetWidth, h: contentEl.offsetHeight };
@@ -81,6 +86,16 @@ export function createFit({ fitEl, contentEl, hasContent = () => true }) {
     fit();
   }
 
+  const wasSized = () => { try { return !!sizedKey && localStorage.getItem(sizedKey) === "1"; } catch (_) { return false; } };
+  const markSized = () => { try { if (sizedKey) localStorage.setItem(sizedKey, "1"); } catch (_) { /* ignore */ } };
+
+  // Safe to call after every render or at launch: sizes the window to its content only once.
+  async function autoSizeOnce() {
+    if (!appWindow || !hasContent() || wasSized()) { fit(); return; }
+    await resizeWindowToContent();
+    markSized();
+  }
+
   new ResizeObserver(fit).observe(fitEl);
-  return { fit, resizeWindowToContent };
+  return { fit, resizeWindowToContent, autoSizeOnce };
 }

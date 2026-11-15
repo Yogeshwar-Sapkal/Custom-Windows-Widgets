@@ -28,7 +28,7 @@ const panels = createPanels(el.settingsPanel);
 let hasData = false;
 let lastReport = null;
 let lastUpdated = 0;
-const { fit, resizeWindowToContent } = createFit({ fitEl: el.fit, contentEl: el.battery, hasContent: () => hasData });
+const { fit, resizeWindowToContent, autoSizeOnce } = createFit({ fitEl: el.fit, contentEl: el.battery, hasContent: () => hasData, sizedKey: "battery.sized.v1" });
 
 const clockTime = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
@@ -80,7 +80,7 @@ function render() {
     }
     el.rows.appendChild(row);
   }
-  resizeWindowToContent();
+  autoSizeOnce(); // never resizes after the first time: a refresh must not undo the user's window size
 }
 
 let timer = null;
@@ -128,8 +128,8 @@ function wire() {
   el.size.addEventListener("input", () => { config.size = +el.size.value; el.sizeVal.textContent = config.size + " px"; applyStyle(); save(); fit(); });
   el.size.addEventListener("change", () => resizeWindowToContent());
   el.opacity.addEventListener("input", () => { config.opacity = +el.opacity.value; applyStyle(); save(); });
-  el.noReading.addEventListener("change", () => { config.showNoReading = el.noReading.checked; save(); if (lastReport) render(); });
-  el.disconnected.addEventListener("change", () => { config.showDisconnected = el.disconnected.checked; save(); if (lastReport) render(); });
+  el.noReading.addEventListener("change", () => { config.showNoReading = el.noReading.checked; save(); if (lastReport) { render(); resizeWindowToContent(); } });
+  el.disconnected.addEventListener("change", () => { config.showDisconnected = el.disconnected.checked; save(); if (lastReport) { render(); resizeWindowToContent(); } });
   el.top.addEventListener("change", () => { config.alwaysOnTop = el.top.checked; save(); applyAlwaysOnTop(config.alwaysOnTop); });
 }
 

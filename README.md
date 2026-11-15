@@ -5,7 +5,7 @@ Personal desktop widgets for Windows 11, built with Tauri 2: one app, one tray i
 ## Widgets
 
 - **World Clock**: see below.
-- **Weather**: current temperature, feels-like, wind, rain/snow, UV index and humidity, a 24-hour temperature line and a 5-day outlook for one searched city. Data from [Open-Meteo](https://open-meteo.com) (no account or key). Metric or imperial, refreshes every 30 minutes, and keeps showing the last data (marked offline) if a refresh fails.
+- **Weather**: current temperature, feels-like, wind, rain/snow, UV index and humidity, a 24-hour temperature line and a 5-day outlook for one searched city. Data from [Open-Meteo](https://open-meteo.com) (no account or key). Metric or imperial, refreshes every 15 minutes, and keeps showing the last data (marked offline) if a refresh fails.
 
 The tray icon's menu shows or hides each widget, toggles launch at login, and quits. A widget's x button only hides it.
 
@@ -31,6 +31,7 @@ Needs Node 20+, Rust (stable) and the Visual Studio C++ Build Tools.
 npm install
 npm run dev     # run the widget
 npm run build   # build the installer
+npm test        # regression tests (Node built-in runner, no extra packages)
 ```
 
 The UI is plain HTML/CSS/JS in `src/` (native ES modules, no bundler): shared code in `src/shared/`, one folder per widget in `src/widgets/`. `src/widgets/world-clock/zones.js` is generated from the IANA tz database with `npm run zones` (needs Python 3 and a tz database).

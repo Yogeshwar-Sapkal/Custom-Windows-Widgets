@@ -59,8 +59,8 @@ const el = {
 };
 
 const panels = createPanels(el.searchPanel, el.settingsPanel);
-const { fit, resizeWindowToContent } = createFit({
-  fitEl: el.fit, contentEl: el.clocks, hasContent: () => config.clocks.length > 0,
+const { fit, resizeWindowToContent, autoSizeOnce } = createFit({
+  fitEl: el.fit, contentEl: el.clocks, hasContent: () => config.clocks.length > 0, sizedKey: "worldclock.sized.v1",
 });
 
 // ---- Time formatting -------------------------------------------------
@@ -305,5 +305,5 @@ syncSettingsUi();
 wire();
 applyAlwaysOnTop(config.alwaysOnTop);
 renderClocks();
-requestAnimationFrame(() => (appWindow ? resizeWindowToContent() : fit()));
+requestAnimationFrame(() => autoSizeOnce());
 scheduleTick();

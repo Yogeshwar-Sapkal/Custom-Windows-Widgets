@@ -7,9 +7,11 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
-    "zones": "python3 scripts/gen-zones.py"
+    "zones": "python3 scripts/gen-zones.py",
+    "test": "node --test"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"
-  }
+  },
+  "type": "module"
 }
