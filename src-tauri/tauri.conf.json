@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "label": "main",
+        "label": "world-clock",
         "title": "World Clock",
         "width": 260,
         "height": 190,
@@ -21,7 +21,8 @@
         "resizable": true,
         "shadow": false,
         "alwaysOnTop": false,
-        "skipTaskbar": false
+        "skipTaskbar": false,
+        "url": "widgets/world-clock/index.html"
       }
     ],
     "security": {
@@ -30,7 +31,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
