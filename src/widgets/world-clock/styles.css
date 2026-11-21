@@ -2,7 +2,7 @@
 :root { --size: 48px; }
 
 #clocks {
-  display: flex; gap: calc(var(--size) * 0.4);
+  display: flex; gap: calc(var(--size) * 0.35);
   width: max-content; height: max-content;
   transform-origin: top left;
 }
@@ -10,23 +10,31 @@
 #clocks.row { flex-direction: row; }
 #clocks.grid { display: grid; grid-template-columns: repeat(2, auto); }
 
-.clock { display: flex; flex-direction: column; min-width: 0; }
-.clock .top { display: flex; align-items: center; gap: 0.4em; font-size: calc(var(--size) * 0.3); color: var(--fg-dim); }
+.clock { display: flex; flex-direction: column; min-width: 0; border-radius: 10px; cursor: pointer; outline: none; }
+.clock:focus-visible, .add-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+/* The first row leaves room for the menu button in the corner (clocks stay aligned in every layout). */
+.clock:first-child .top { padding-right: 46px; }
+#clocks.column .clock:first-child .top,
+#clocks.row .clock .top,
+#clocks.grid .clock:nth-child(-n+2) .top { min-height: 36px; }
+.clock .top { display: flex; align-items: center; gap: 0.4em; font-size: calc(var(--size) * 0.3); color: var(--fg); min-width: 0; }
 .clock .top svg { width: 1.1em; height: 1.1em; flex: none; }
 .clock .sun { color: #f5b800; }
 .clock .moon { color: #9db4ff; }
-.clock .city { font-weight: 600; white-space: nowrap; }
+.clock .city { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .clock .time {
   font-size: var(--size); line-height: 1.05; font-weight: 600;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .clock .time small { font-size: 0.4em; margin-left: 0.25em; font-weight: 500; color: var(--fg-dim); }
-.clock .sub { font-size: calc(var(--size) * 0.26); color: var(--fg-dim); white-space: nowrap; }
+.clock .sub { font-size: calc(var(--size) * 0.28); color: var(--fg-dim); white-space: nowrap; }
+.clock .sub[hidden] { display: none; }
+.clock .sub .tag { font-weight: 600; color: var(--fg); }
 
-.clock .remove {
-  margin-left: 0.3em; width: 1.4em; height: 1.4em; border: 0; border-radius: 50%; padding: 0;
-  background: rgba(128, 128, 128, 0.25); color: var(--fg); cursor: pointer; line-height: 1;
-  opacity: 0; transition: opacity 0.15s;
+.add-tile {
+  min-height: var(--tap); min-width: calc(var(--size) * 3); padding: 0 16px; border-radius: 12px; cursor: pointer;
+  border: 2px dashed rgba(128, 128, 128, 0.6); background: transparent; color: var(--fg); font-weight: 600;
+  font-size: calc(var(--size) * 0.3);
 }
-.clock:hover .remove, .clock .remove:focus-visible { opacity: 1; }
-.clock .remove:hover { background: rgba(200, 60, 60, 0.6); }
+.add-tile:hover { background: rgba(128, 128, 128, 0.2); }
+.clock-name { margin: 4px 0 14px; font-weight: 600; font-size: 15px; }

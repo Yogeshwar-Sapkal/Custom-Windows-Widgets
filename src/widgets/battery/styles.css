@@ -4,23 +4,22 @@
 #battery { font-size: var(--size); width: 18em; transform-origin: top left; }
 #battery[hidden] { display: none; }
 
-header { padding-right: 7em; margin-bottom: 0.6em; }
-#title { font-weight: 600; font-size: 1.1em; }
-#status { min-height: 1.3em; }
-#status.warn { color: #e8a23b; }
+header { padding-right: 3.6em; margin-bottom: 0.4em; min-height: 2.2em; }
+#title { font-weight: 600; font-size: 1.15em; }
+#status { margin-top: 0.15em; }
 
-.row { display: grid; grid-template-columns: 2em 1fr 6.2em; align-items: center; gap: 0.6em; padding: 0.45em 0; }
-.row.dim { opacity: 0.5; }
-.row.noread { grid-template-columns: 2em 1fr 1.2em; }
-.row .ico { font-size: 1.5em; text-align: center; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
-.row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row .sub { color: var(--fg-dim); font-size: 0.85em; }
-.row .info { min-width: 0; }
-
-.level { display: flex; align-items: center; gap: 0.5em; justify-content: flex-end; }
-.bar { flex: 1; height: 0.55em; border-radius: 1em; background: rgba(128, 128, 128, 0.3); overflow: hidden; }
+.row-item { display: grid; grid-template-columns: 2em 1fr; align-items: start; gap: 0.7em; padding: 0.55em 0; }
+.row-item.dim { opacity: 0.55; }
+.ico { font-size: 1.5em; text-align: center; line-height: 1.2; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+.ico svg { width: 1em; height: 1em; color: var(--accent); vertical-align: -0.12em; }
+.body { min-width: 0; }
+.line { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6em; }
+.name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.pct { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; flex: none; }
+.pct.none { font-weight: 400; color: var(--fg-dim); font-size: 0.9em; white-space: nowrap; min-width: 0; }
+.bar { height: 0.5em; margin-top: 0.35em; border-radius: 1em; background: rgba(128, 128, 128, 0.35); overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: 1em; background: var(--ok); }
 .bar.mid i { background: var(--mid); }
 .bar.low i { background: var(--low); }
-.pct { min-width: 2.6em; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.pct.none { color: var(--fg-dim); font-weight: 400; }
+.sub { margin-top: 0.25em; color: var(--fg-dim); font-size: 0.85em; }
+.sub .lowtag { color: var(--low); font-weight: 600; }

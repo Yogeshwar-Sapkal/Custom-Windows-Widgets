@@ -9,10 +9,15 @@
 }
 #weather[hidden] { display: none; }
 
-header { padding-right: 7em; min-height: 2.4em; }
-#loc { font-weight: 600; font-size: 1.15em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#status { min-height: 1.3em; }
-#status.warn { color: #e8a23b; }
+header { padding-right: 3.6em; min-height: 2.4em; }
+.loc-btn {
+  display: block; max-width: 100%; min-height: var(--tap); margin: -0.6em 0 0 -0.4em; padding: 0 0.4em; border: 0; border-radius: 10px;
+  background: transparent; font-weight: 600; font-size: 1.15em; text-align: left; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.loc-btn::after { content: " \25BE"; color: var(--fg-dim); }
+.loc-btn:hover, .loc-btn:focus-visible { background: rgba(128, 128, 128, 0.2); }
+#status { margin-top: -0.5em; margin-bottom: 0.3em; }
 
 #now { display: flex; align-items: center; gap: 0.6em; margin: 0.2em 0 0.8em; }
 #now-icon { font-size: 3.4em; line-height: 1; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
@@ -23,11 +28,13 @@ header { padding-right: 7em; min-height: 2.4em; }
 #stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5em; margin-bottom: 0.9em; }
 .stat { background: rgba(128, 128, 128, 0.15); border-radius: 0.6em; padding: 0.5em 0.5em; display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
 .stat .k { color: var(--fg-dim); font-size: 0.85em; white-space: nowrap; }
-.stat .v { font-size: 0.95em; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat .v { font-size: 1.05em; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat .s { color: var(--fg-dim); font-size: 0.8em; min-height: 1.1em; white-space: nowrap; }
 
 h3 { display: flex; justify-content: space-between; gap: 0.6em; margin: 0 0 0.4em; font-size: 0.9em; font-weight: 600; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.04em; }
 section { margin-bottom: 0.9em; }
 
+#chart { touch-action: none; cursor: crosshair; }
 #chart svg { width: 100%; height: auto; display: block; overflow: visible; }
 #chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 #chart .area { fill: var(--accent); opacity: 0.12; }
@@ -53,3 +60,5 @@ section { margin-bottom: 0.9em; }
 .day .range .lo { color: var(--fg-dim); }
 
 #readout { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#readout:empty::before { content: "Tap the graph for details"; color: var(--fg-dim); font-weight: 400; font-size: 0.9em; }
+#sec-hourly[hidden], #sec-daily[hidden] { display: none; }
