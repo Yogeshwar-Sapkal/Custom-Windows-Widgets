@@ -1,7 +1,8 @@
 mod autostart;
 mod battery;
+mod calendar_store;
 
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, path::{Path, PathBuf}, sync::Mutex};
 
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
@@ -11,10 +12,11 @@ use tauri::{
 
 /// Every widget window: (window label, tray menu title).
 /// A widget only appears in the tray menu if its window exists in tauri.conf.json.
-const WIDGETS: [(&str, &str); 3] = [
+const WIDGETS: [(&str, &str); 4] = [
     ("world-clock", "World Clock"),
     ("weather", "Weather"),
     ("battery", "Battery"),
+    ("calendar", "Calendar"),
 ];
 
 #[derive(Default)]
@@ -97,14 +99,43 @@ async fn get_batteries() -> battery::BatteryReport {
         })
 }
 
+fn calendar_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_data_dir().map_err(|e| e.to_string())
+}
+
+/// The saved Calendar entries (JSON text), or nothing if none have been saved yet.
+#[tauri::command]
+async fn calendar_load(app: AppHandle) -> Result<Option<String>, String> {
+    Ok(calendar_store::load(&calendar_dir(&app)?))
+}
+
+/// Save the Calendar entries safely (temporary file, then swap; the previous version is kept).
+#[tauri::command]
+async fn calendar_save(app: AppHandle, json: String) -> Result<(), String> {
+    calendar_store::save(&calendar_dir(&app)?, &json)
+}
+
+/// Write a backup of the entries to a file the user picked in a save dialog.
+#[tauri::command]
+async fn calendar_export(app: AppHandle, path: String) -> Result<(), String> {
+    calendar_store::export_to(&calendar_dir(&app)?, Path::new(&path))
+}
+
+/// Read a backup file the user picked in an open dialog; keeps a copy of the current entries first.
+#[tauri::command]
+async fn calendar_import(app: AppHandle, path: String) -> Result<String, String> {
+    calendar_store::import_from(&calendar_dir(&app)?, Path::new(&path))
+}
+
 pub fn run() {
     tauri::Builder::default()
         // Must be registered first. A second launch (two start-at-login entries, Windows
         // reopening apps, a double click) exits at once and calls this in the running copy.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| reveal_widgets(app)))
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(TrayState::default())
-        .invoke_handler(tauri::generate_handler![hide_widget, sync_tray, get_batteries])
+        .invoke_handler(tauri::generate_handler![hide_widget, sync_tray, get_batteries, calendar_load, calendar_save, calendar_export, calendar_import])
         .setup(|app| {
             let handle = app.handle();
             let menu = Menu::new(handle)?;
