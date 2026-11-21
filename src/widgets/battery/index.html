@@ -13,30 +13,24 @@
       <div id="battery" hidden>
         <header>
           <div id="title">Battery</div>
-          <div id="status" class="note"></div>
+          <div id="status" class="note" hidden></div>
         </header>
         <div id="rows"></div>
       </div>
     </div>
 
-    <div id="controls">
-      <button id="btn-refresh" class="icon-btn" title="Refresh" aria-label="Refresh">&#8635;</button>
-      <button id="btn-settings" class="icon-btn" title="Settings" aria-label="Settings">&#9881;</button>
-      <button id="btn-close" class="icon-btn" title="Hide (use the tray icon to show again)" aria-label="Hide">&times;</button>
-    </div>
-
     <div id="message" class="center-msg" hidden></div>
 
-    <section id="settings" class="panel" hidden>
-      <label>Size <span id="size-val"></span>
-        <input id="opt-size" type="range" min="10" max="28" step="1" />
-      </label>
-      <label>Background opacity
-        <input id="opt-opacity" type="range" min="0" max="100" step="1" />
-      </label>
-      <label class="check"><input id="opt-noreading" type="checkbox" /> Show devices that don't report a battery level</label>
-      <label class="check"><input id="opt-disconnected" type="checkbox" /> Show paired devices that aren't connected</label>
-      <label class="check"><input id="opt-top" type="checkbox" /> Always on top</label>
+    <section id="settings" class="panel" data-title="Settings" hidden>
+      <div class="field"><span class="label">Size</span><div id="opt-size"></div></div>
+      <div class="field">
+        <span class="label">Background</span>
+        <input id="opt-opacity" type="range" min="0" max="100" step="1" aria-label="Background" />
+        <div class="range-ends"><span>See-through</span><span>Solid</span></div>
+      </div>
+      <label class="row"><span>Show devices with no battery reading<span class="hint">Shown as "No reading"</span></span><input id="opt-noreading" type="checkbox" class="switch" /></label>
+      <label class="row"><span>Show paired devices that aren't connected</span><input id="opt-disconnected" type="checkbox" class="switch" /></label>
+      <label class="row"><span>Always on top</span><input id="opt-top" type="checkbox" class="switch" /></label>
       <p class="note">Bluetooth levels appear only for devices that report one to Windows. Updates every 2 minutes.</p>
     </section>
   </div>

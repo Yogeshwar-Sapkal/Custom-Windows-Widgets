@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendar</title>
+  <link rel="stylesheet" href="../../shared/widget.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="card">
+    <div id="fit">
+      <div id="calendar">
+        <div id="banner" class="banner" role="alert" hidden></div>
+
+        <div class="cal-nav">
+          <button id="prev" type="button" class="nav-btn" aria-label="Previous month">&#8249;</button>
+          <h2 id="month-title"></h2>
+          <button id="next" type="button" class="nav-btn" aria-label="Next month">&#8250;</button>
+          <button id="btn-today" type="button" class="btn today">Today</button>
+        </div>
+
+        <div id="weekdays" class="weekdays no-drag" aria-hidden="true"></div>
+        <div id="grid" class="grid no-drag" role="grid"></div>
+
+        <div class="agenda-head">
+          <h3 id="agenda-title">Coming up</h3>
+          <button id="btn-add" type="button" class="btn primary">+ Add</button>
+        </div>
+        <div id="agenda" class="agenda no-drag"></div>
+      </div>
+    </div>
+
+    <!-- New / edit entry: a sheet over the widget, with Cancel and Save always at the top -->
+    <section id="form" class="panel sheet" hidden>
+      <div class="panel-head">
+        <button id="form-cancel" type="button" class="btn">Cancel</button>
+        <strong id="form-title">New entry</strong>
+        <button id="form-save" type="button" class="btn primary">Save</button>
+      </div>
+
+      <div class="field"><div id="f-kind"></div></div>
+
+      <div class="field">
+        <label class="label" for="f-title">Title</label>
+        <input id="f-title" type="text" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="What is it?" />
+        <div class="error" id="e-title" role="alert" hidden></div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="f-date">Date</label>
+        <input id="f-date" type="date" />
+        <div class="error" id="e-date" role="alert" hidden></div>
+      </div>
+
+      <label class="row"><span>Set a time</span><input id="f-has-time" type="checkbox" class="switch" /></label>
+      <div class="field" id="time-field" hidden>
+        <label class="label" for="f-time">Starts at</label>
+        <input id="f-time" type="time" />
+        <div class="error" id="e-time" role="alert" hidden></div>
+      </div>
+
+      <button id="more-toggle" type="button" class="btn block" aria-expanded="false">More options &#9662;</button>
+      <div id="more" hidden>
+        <label class="row" id="multi-row"><span>Ends on a different day</span><input id="f-multi" type="checkbox" class="switch" /></label>
+        <div class="field" id="enddate-field" hidden>
+          <label class="label" for="f-enddate">Ends on</label>
+          <input id="f-enddate" type="date" />
+          <div class="error" id="e-endDate" role="alert" hidden></div>
+        </div>
+        <div class="field" id="endtime-field" hidden>
+          <label class="label" for="f-endtime">Ends at</label>
+          <input id="f-endtime" type="time" />
+          <div class="error" id="e-endTime" role="alert" hidden></div>
+        </div>
+        <div class="field">
+          <label class="label" for="f-location">Location</label>
+          <input id="f-location" type="text" maxlength="200" autocomplete="off" placeholder="Optional" />
+        </div>
+        <div class="field"><span class="label">Colour</span><div id="f-colour" class="swatches" role="radiogroup" aria-label="Colour"></div></div>
+        <div class="field">
+          <label class="label" for="f-repeat">Repeat</label>
+          <select id="f-repeat">
+            <option value="none">Never</option>
+            <option value="daily">Every day</option>
+            <option value="weekly">Every week</option>
+            <option value="monthly">Every month</option>
+            <option value="yearly">Every year</option>
+          </select>
+          <div class="note" id="repeat-note" hidden>Changes apply to every repeat.</div>
+        </div>
+        <label class="row" id="until-row" hidden><span>Stop repeating on a date</span><input id="f-until-sw" type="checkbox" class="switch" /></label>
+        <div class="field" id="until-field" hidden>
+          <label class="label" for="f-until">Last day</label>
+          <input id="f-until" type="date" />
+          <div class="error" id="e-until" role="alert" hidden></div>
+        </div>
+      </div>
+
+      <button id="form-delete" type="button" class="btn danger block" hidden>Delete</button>
+    </section>
+
+    <!-- Ask before something that can't be undone with one tap -->
+    <section id="confirm" class="panel hint" hidden>
+      <p id="confirm-text"></p>
+      <div class="actions">
+        <button id="confirm-no" type="button" class="btn">Cancel</button>
+        <button id="confirm-yes" type="button" class="btn primary">OK</button>
+      </div>
+    </section>
+
+    <section id="settings" class="panel" data-title="Settings" hidden>
+      <div class="field"><span class="label">Size</span><div id="opt-size"></div></div>
+      <div class="field">
+        <span class="label">Background</span>
+        <input id="opt-opacity" type="range" min="0" max="100" step="1" aria-label="Background" />
+        <div class="range-ends"><span>See-through</span><span>Solid</span></div>
+      </div>
+      <div class="field"><span class="label">Week starts on</span><div id="opt-weekstart"></div></div>
+      <label class="row"><span>Show week numbers</span><input id="opt-weeknums" type="checkbox" class="switch" /></label>
+      <label class="row"><span>24-hour time</span><input id="opt-24h" type="checkbox" class="switch" /></label>
+      <label class="row"><span>Always on top</span><input id="opt-top" type="checkbox" class="switch" /></label>
+      <div class="field backup">
+        <span class="label">Backup</span>
+        <p class="note">Your entries are saved on this PC only. A backup file lets you keep a copy or move them to another PC.</p>
+        <div class="two">
+          <button id="btn-export" type="button" class="btn">Export&hellip;</button>
+          <button id="btn-import" type="button" class="btn">Import&hellip;</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" hidden>
+      <span id="toast-text"></span>
+      <button id="toast-action" type="button" class="btn" hidden>Undo</button>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

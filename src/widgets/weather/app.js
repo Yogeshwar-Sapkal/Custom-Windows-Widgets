@@ -1,7 +1,7 @@
 // Weather widget. Plain ES module, no bundler. Data: Open-Meteo (no account or key).
 import {
-  appWindow, loadConfig, saveConfig, applyOpacity, applyAlwaysOnTop,
-  setupChrome, createPanels, createFit,
+  loadConfig, saveConfig, applyOpacity, applyAlwaysOnTop,
+  mountChrome, createPanels, createFit, bindSegmented,
 } from "../../shared/widget.js";
 import { geocodeUrl, parseGeocode, forecastUrl, parseForecast, unitLabels, uvLabel } from "./api.js";
 import { describe } from "./codes.js";
@@ -12,7 +12,9 @@ const REFRESH_MS = 15 * 60 * 1000; // Open-Meteo refreshes its current condition
 const RETRY_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 15000;
 
-const DEFAULTS = { location: null, units: "metric", hour24: true, size: 44, opacity: 85, alwaysOnTop: false };
+const SIZES = [{ label: "Small", value: 32 }, { label: "Medium", value: 44 }, { label: "Large", value: 58 }, { label: "Extra large", value: 72 }];
+const UNITS = [{ label: "Metric (\u00B0C)", value: "metric" }, { label: "Imperial (\u00B0F)", value: "imperial" }];
+const DEFAULTS = { location: null, units: "metric", hour24: true, size: 44, opacity: 85, alwaysOnTop: false, showHourly: true, showDaily: true };
 const config = loadConfig(STORAGE_KEY, DEFAULTS);
 const save = () => saveConfig(STORAGE_KEY, config);
 
@@ -22,16 +24,15 @@ const el = {
   card: $("card"), fit: $("fit"), weather: $("weather"), message: $("message"),
   loc: $("loc"), status: $("status"),
   nowIcon: $("now-icon"), nowTemp: $("now-temp"), nowText: $("now-text"), nowFeels: $("now-feels"), nowRange: $("now-range"),
-  wind: $("st-wind"), precipKey: $("st-precip-k"), precip: $("st-precip"), uv: $("st-uv"), hum: $("st-hum"),
-  chart: $("chart"), daily: $("daily"),
-  place: $("btn-place"), refresh: $("btn-refresh"), settings: $("btn-settings"), close: $("btn-close"),
+  wind: $("st-wind"), precipKey: $("st-precip-k"), precip: $("st-precip"), uv: $("st-uv"), uvCaption: $("st-uv-s"), hum: $("st-hum"),
+  chart: $("chart"), daily: $("daily"), secHourly: $("sec-hourly"), secDaily: $("sec-daily"),
   searchPanel: $("search"), searchInput: $("search-input"), searchResults: $("search-results"),
   settingsPanel: $("settings"),
-  units: $("opt-units"), size: $("opt-size"), sizeVal: $("size-val"), opacity: $("opt-opacity"),
-  h24: $("opt-24h"), top: $("opt-top"),
+  units: $("opt-units"), size: $("opt-size"), opacity: $("opt-opacity"),
+  h24: $("opt-24h"), hourly: $("opt-hourly"), dailyToggle: $("opt-daily"), top: $("opt-top"),
 };
 
-const panels = createPanels(el.searchPanel, el.settingsPanel);
+const panels = createPanels();
 let hasData = false;
 const { fit, resizeWindowToContent, autoSizeOnce } = createFit({ fitEl: el.fit, contentEl: el.weather, hasContent: () => hasData, sizedKey: "weather.sized.v1" });
 
@@ -114,16 +115,17 @@ function hourlyChart(hours) {
     '<line class="cursor" y1="' + padTop + '" y2="' + base + '" style="display:none"/></svg>';
 }
 
-// Hover: show the exact time, temperature and condition for the point under the pointer.
+// Touch or hover: show the exact time, temperature and condition for the point under the finger
+// or pointer. Pointer events cover mouse, touch and pen alike.
 function wireChartHover() {
   const readout = $("readout");
+  let hideTimer = null;
   const reset = () => {
     readout.textContent = "";
     const c = el.chart.querySelector(".cursor");
     if (c) c.style.display = "none";
   };
-  el.chart.addEventListener("mouseleave", reset);
-  el.chart.addEventListener("mousemove", (e) => {
+  const show = (e) => {
     const svg = el.chart.querySelector("svg");
     const n = chartHours.length;
     if (!svg || !n) return;
@@ -137,7 +139,12 @@ function wireChartHover() {
     c.setAttribute("x1", chartX(i, n).toFixed(1));
     c.setAttribute("x2", chartX(i, n).toFixed(1));
     c.style.display = "";
-  });
+  };
+  el.chart.addEventListener("pointerdown", (e) => { clearTimeout(hideTimer); show(e); });
+  el.chart.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" || e.buttons) show(e); });
+  el.chart.addEventListener("pointerup", (e) => { if (e.pointerType !== "mouse") hideTimer = setTimeout(reset, 4000); });
+  el.chart.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") reset(); });
+  el.chart.addEventListener("pointercancel", reset);
 }
 
 // ---- Rendering -------------------------------------------------------
@@ -159,19 +166,25 @@ function render(data, { stale }) {
 
   const l = config.location;
   el.loc.textContent = l.name + (l.country ? ", " + l.country : "");
-  el.status.className = "note" + (stale ? " warn" : "");
-  el.status.textContent = stale ? "Offline - showing data from " + clockTime(data.fetchedAt) : "Updated " + clockTime(data.fetchedAt);
+  el.loc.title = "Change location. Updated " + clockTime(data.fetchedAt);
+  // "Updated ..." only matters when the data is old, so say nothing otherwise.
+  el.status.hidden = !stale;
+  el.status.className = "note warn";
+  el.status.textContent = stale ? "Offline - showing data from " + clockTime(data.fetchedAt) : "";
 
   el.nowIcon.textContent = cond.icon;
   el.nowTemp.textContent = fmtTemp(c.temp);
   el.nowText.textContent = cond.text;
   el.nowFeels.textContent = "Feels like " + fmtTemp(c.feels);
-  el.nowRange.textContent = data.today ? "H " + fmtTemp(data.today.max) + "  L " + fmtTemp(data.today.min) : "";
+  el.nowRange.textContent = data.today ? "High " + fmtTemp(data.today.max) + " \u00b7 Low " + fmtTemp(data.today.min) : "";
 
   el.wind.textContent = round(c.wind) + " " + u.wind;
-  if (c.snow > 0) { el.precipKey.textContent = "Snow"; el.precip.textContent = amount(c.snow, u.snow) + " " + u.snow; }
-  else { el.precipKey.textContent = "Rain"; el.precip.textContent = amount(c.precip, u.rain) + " " + u.rain; }
-  el.uv.textContent = c.uv == null ? "-" : round(c.uv) + " " + uvLabel(c.uv);
+  if (c.snow > 0) { el.precipKey.textContent = "Snow now"; el.precip.textContent = amount(c.snow, u.snow) + " " + u.snow; }
+  else { el.precipKey.textContent = "Rain now"; el.precip.textContent = amount(c.precip, u.rain) + " " + u.rain; }
+  el.uv.textContent = c.uv == null ? "-" : String(round(c.uv));
+  el.uvCaption.textContent = c.uv == null ? "" : uvLabel(c.uv);
+  el.secHourly.hidden = !config.showHourly;
+  el.secDaily.hidden = !config.showDaily;
   el.hum.textContent = round(c.humidity) + "%";
 
   chartHours = data.hours;
@@ -232,7 +245,6 @@ async function refresh() {
   if (!config.location) { showMessage("Search for a city to see the weather."); return; }
   if (inFlight) return;
   inFlight = true;
-  el.refresh.disabled = true;
   try {
     const data = parseForecast(await fetchJson(forecastUrl(config.location, config.units)));
     writeCache(data);
@@ -245,7 +257,6 @@ async function refresh() {
     scheduleRefresh(RETRY_MS);
   } finally {
     inFlight = false;
-    el.refresh.disabled = false;
   }
 }
 
@@ -314,12 +325,20 @@ function applyStyle() {
   applyOpacity(config.opacity);
 }
 
+const unitsPicker = bindSegmented(el.units, UNITS, (value) => {
+  config.units = value; save(); showMessage("Loading weather..."); refresh();
+});
+const sizePicker = bindSegmented(el.size, SIZES, (value) => {
+  config.size = value; applyStyle(); save(); resizeWindowToContent();
+});
+
 function syncSettingsUi() {
-  el.units.value = config.units;
-  el.size.value = config.size;
-  el.sizeVal.textContent = config.size + " px";
+  unitsPicker.set(config.units);
+  sizePicker.set(config.size);
   el.opacity.value = config.opacity;
   el.h24.checked = config.hour24;
+  el.hourly.checked = config.showHourly;
+  el.dailyToggle.checked = config.showDaily;
   el.top.checked = config.alwaysOnTop;
 }
 
@@ -329,10 +348,16 @@ function rerenderFromCache() {
 }
 
 function wire() {
-  setupChrome({ card: el.card, closeButton: el.close, onBackgroundPress: panels.closeAll });
-  el.place.addEventListener("click", openSearch);
-  el.refresh.addEventListener("click", () => { scheduleRefresh(REFRESH_MS); refresh(); });
-  el.settings.addEventListener("click", () => panels.toggle(el.settingsPanel));
+  [el.searchPanel, el.settingsPanel].forEach(panels.add);
+  mountChrome({
+    card: el.card, panels, name: "Weather",
+    items: [
+      { id: "refresh", label: "Refresh now", action: () => { scheduleRefresh(REFRESH_MS); refresh(); } },
+      { id: "place", label: "Change location", action: openSearch },
+      { id: "settings", label: "Settings", action: () => panels.toggle(el.settingsPanel) },
+    ],
+  });
+  el.loc.addEventListener("click", openSearch); // the place name itself is the obvious thing to tap
 
   el.searchInput.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 300); });
   el.searchInput.addEventListener("keydown", (e) => {
@@ -341,11 +366,10 @@ function wire() {
     else if (e.key === "Enter" && results[active]) chooseLocation(results[active]);
   });
 
-  el.units.addEventListener("change", () => { config.units = el.units.value; save(); showMessage("Loading weather..."); refresh(); });
-  el.size.addEventListener("input", () => { config.size = +el.size.value; el.sizeVal.textContent = config.size + " px"; applyStyle(); save(); fit(); });
-  el.size.addEventListener("change", () => resizeWindowToContent());
   el.opacity.addEventListener("input", () => { config.opacity = +el.opacity.value; applyStyle(); save(); });
   el.h24.addEventListener("change", () => { config.hour24 = el.h24.checked; save(); rerenderFromCache(); });
+  el.hourly.addEventListener("change", () => { config.showHourly = el.hourly.checked; save(); rerenderFromCache(); resizeWindowToContent(); });
+  el.dailyToggle.addEventListener("change", () => { config.showDaily = el.dailyToggle.checked; save(); rerenderFromCache(); resizeWindowToContent(); });
   el.top.addEventListener("change", () => { config.alwaysOnTop = el.top.checked; save(); applyAlwaysOnTop(config.alwaysOnTop); });
 
   wireChartHover();

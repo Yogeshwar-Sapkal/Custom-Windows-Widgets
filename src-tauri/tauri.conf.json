@@ -55,6 +55,22 @@
         "skipTaskbar": false,
         "url": "widgets/battery/index.html",
         "visible": false
+      },
+      {
+        "label": "calendar",
+        "title": "Calendar",
+        "width": 380,
+        "height": 640,
+        "minWidth": 320,
+        "minHeight": 460,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "shadow": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "url": "widgets/calendar/index.html",
+        "visible": false
       }
     ],
     "security": {

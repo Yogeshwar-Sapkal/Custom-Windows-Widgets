@@ -1,17 +1,22 @@
-/* Base look shared by every widget window. */
+/* Base look shared by every widget window. Touch targets are at least 44 px. */
 :root {
   --fg: #f3f3f3;
-  --fg-dim: rgba(243, 243, 243, 0.65);
+  --fg-dim: rgba(243, 243, 243, 0.82);
   --bg: 32, 32, 32;
   --accent: #60cdff;
+  --on-accent: #06202e;
+  --danger: #ff7b72;
   --opacity: 0.85;
+  --tap: 44px;
 }
 @media (prefers-color-scheme: light) {
   :root {
     --fg: #1b1b1b;
-    --fg-dim: rgba(27, 27, 27, 0.6);
+    --fg-dim: rgba(27, 27, 27, 0.76);
     --bg: 243, 243, 243;
     --accent: #005fb8;
+    --on-accent: #ffffff;
+    --danger: #c42b1c;
   }
 }
 
@@ -23,6 +28,7 @@ html, body {
   color: var(--fg);
   user-select: none;
 }
+button { touch-action: manipulation; font: inherit; color: inherit; }
 
 #card {
   position: relative;
@@ -31,43 +37,120 @@ html, body {
   border: 1px solid rgba(128, 128, 128, 0.25);
   border-radius: 12px;
   overflow: hidden;
+  touch-action: none;
+  /* A halo in the card colour keeps small text readable over any wallpaper. */
+  text-shadow: 0 0 3px rgba(var(--bg), 0.85);
 }
 
 /* The fit wrapper is scaled to the window; its content keeps its natural size. */
 #fit { position: absolute; inset: 0; padding: 14px; overflow: hidden; }
 
-#controls {
-  position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; z-index: 2;
-  opacity: 0; transition: opacity 0.15s;
+/* ---- The one always-visible menu button ---- */
+#controls { position: absolute; top: 4px; right: 4px; z-index: 2; }
+.menu-btn {
+  width: var(--tap); height: var(--tap); border: 0; border-radius: 10px; cursor: pointer;
+  background: rgba(128, 128, 128, 0.22); color: var(--fg); font-size: 24px; line-height: 1;
+  padding: 0 0 6px; opacity: 0.85;
 }
-#card:hover #controls, #card:focus-within #controls { opacity: 1; }
-.icon-btn {
-  width: 26px; height: 26px; border: 0; border-radius: 6px; cursor: pointer;
-  background: rgba(128, 128, 128, 0.25); color: var(--fg); font-size: 16px; line-height: 1;
-}
-.icon-btn:hover { background: rgba(128, 128, 128, 0.45); }
-.icon-btn:disabled { opacity: 0.35; cursor: default; }
+.menu-btn:hover, .menu-btn:focus-visible { opacity: 1; background: rgba(128, 128, 128, 0.4); }
 
+/* ---- Panels (menu, settings, forms): open over the widget ---- */
 .panel {
-  position: absolute; z-index: 3; top: 36px; right: 6px; width: min(260px, calc(100% - 12px));
-  max-height: calc(100% - 44px); overflow: auto;
+  position: absolute; z-index: 3; top: 52px; right: 6px; width: min(300px, calc(100% - 12px));
+  max-height: calc(100% - 60px); overflow: auto; touch-action: pan-y;
   background: rgb(var(--bg)); border: 1px solid rgba(128, 128, 128, 0.35);
-  border-radius: 8px; padding: 10px; font-size: 13px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  border-radius: 12px; padding: 8px 12px 12px; font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 .panel[hidden] { display: none; }
-.panel label { display: block; margin-bottom: 10px; }
-.panel label.check { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.panel select, .panel input[type="range"], .panel input[type="text"] { width: 100%; margin-top: 4px; }
-.panel input[type="text"] { margin: 0 0 8px; padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.5); background: transparent; color: var(--fg); user-select: text; }
-.panel select { padding: 4px; background: rgb(var(--bg)); color: var(--fg); }
+.panel.sheet { top: 6px; left: 6px; right: 6px; bottom: 6px; width: auto; max-height: none; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  position: sticky; top: -8px; z-index: 1; margin: -8px -12px 8px; padding: 6px 8px 6px 12px;
+  background: rgb(var(--bg)); border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+.panel-head strong { font-size: 15px; }
+.panel.menu { width: 230px; padding: 6px; }
+.panel.menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--tap);
+  padding: 0 12px; border: 0; border-radius: 8px; background: transparent; text-align: left; cursor: pointer;
+}
+.panel.menu button:hover, .panel.menu button:focus-visible { background: rgba(128, 128, 128, 0.25); }
+.panel.hint p { margin: 4px 0 12px; line-height: 1.4; }
+.panel.hint .actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-.results { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; }
-.results li { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+/* ---- Buttons ---- */
+.btn {
+  min-height: var(--tap); padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
+  background: rgba(128, 128, 128, 0.28); font-weight: 600;
+}
+.btn:hover, .btn:focus-visible { background: rgba(128, 128, 128, 0.42); }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.primary:hover, .btn.primary:focus-visible { filter: brightness(1.1); background: var(--accent); }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.block { width: 100%; }
+
+/* ---- Settings controls ---- */
+.field { display: block; margin: 0 0 14px; }
+.field > .label { display: block; margin-bottom: 6px; font-weight: 600; }
+.row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: var(--tap); margin: 0; cursor: pointer;
+}
+.row .hint { display: block; color: var(--fg-dim); font-size: 12px; }
+
+input.switch {
+  appearance: none; -webkit-appearance: none; flex: none; width: 48px; height: 28px; margin: 0;
+  border-radius: 14px; background: rgba(128, 128, 128, 0.5); position: relative; cursor: pointer;
+  transition: background 0.15s;
+}
+input.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  border-radius: 50%; background: #fff; transition: left 0.15s;
+}
+input.switch:checked { background: var(--accent); }
+input.switch:checked::after { left: 23px; }
+input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: transparent; margin: 0; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: rgba(128, 128, 128, 0.5); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border: 0; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.range-ends { display: flex; justify-content: space-between; color: var(--fg-dim); font-size: 12px; }
+
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(128, 128, 128, 0.2); }
+.seg button {
+  flex: 1; min-height: 40px; padding: 0 6px; border: 0; border-radius: 9px; background: transparent; cursor: pointer;
+}
+.seg button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+
+.panel select, .panel input[type="text"], .panel input[type="date"], .panel input[type="time"] {
+  width: 100%; min-height: var(--tap); padding: 0 10px; border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.55); background: rgb(var(--bg)); color: var(--fg); font: inherit;
+}
+.panel input[type="text"], .panel input[type="date"], .panel input[type="time"] { user-select: text; }
+
+.results { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow: auto; touch-action: pan-y; }
+.results li {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: var(--tap);
+  padding: 4px 10px; border-radius: 8px; cursor: pointer;
+}
 .results li:hover, .results li.active { background: rgba(128, 128, 128, 0.25); }
 .results li span { color: var(--fg-dim); font-size: 12px; }
 .results li.none { cursor: default; color: var(--fg-dim); }
 
 .note { color: var(--fg-dim); font-size: 12px; }
-.center-msg { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; color: var(--fg-dim); font-size: 13px; padding: 16px; text-align: center; }
+.warn { color: #e8a23b; }
+.center-msg { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; color: var(--fg-dim); font-size: 14px; padding: 16px; text-align: center; }
 .center-msg[hidden] { display: none; }
+
+/* ---- A short message with an action, e.g. "Deleted. Undo" ---- */
+.toast {
+  position: absolute; z-index: 4; left: 8px; right: 8px; bottom: 8px; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; padding: 4px 4px 4px 14px; border-radius: 12px;
+  background: rgb(var(--bg)); border: 1px solid rgba(128, 128, 128, 0.45); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.toast[hidden] { display: none; }

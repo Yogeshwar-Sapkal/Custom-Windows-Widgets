@@ -1,12 +1,14 @@
 // World Clock widget. Plain ES module, no bundler.
 import {
   appWindow, loadConfig, saveConfig, applyOpacity, applyAlwaysOnTop,
-  setupChrome, createPanels, createFit,
+  mountChrome, createPanels, createFit, bindSegmented,
 } from "../../shared/widget.js";
 import { ZONES } from "./zones.js";
 
 const MAX_CLOCKS = 4;
-const STORAGE_KEY = "worldclock.config.v1"; // unchanged, so saved clocks survive the restructure
+const STORAGE_KEY = "worldclock.config.v1"; // unchanged, so saved clocks survive restructures
+const SIZES = [{ label: "Small", value: 32 }, { label: "Medium", value: 48 }, { label: "Large", value: 64 }, { label: "Extra large", value: 80 }];
+const LAYOUTS = [{ label: "Column", value: "column" }, { label: "Row", value: "row" }, { label: "2 × 2", value: "grid" }];
 
 // ---- Zones -----------------------------------------------------------
 const zoneById = new Map(ZONES.map((z) => [z.id, z]));
@@ -20,6 +22,7 @@ const ALIASES = {
   "Pacific/Truk": "Pacific/Chuuk", "Pacific/Ponape": "Pacific/Pohnpei", "UTC": "Etc/UTC",
 };
 const canonical = (id) => ALIASES[id] || id;
+const LOCAL_ZONE = canonical(Intl.DateTimeFormat().resolvedOptions().timeZone || "");
 
 function zoneFor(id) {
   if (zoneById.has(id)) return zoneById.get(id);
@@ -40,27 +43,24 @@ const DEFAULTS = {
 };
 
 const config = loadConfig(STORAGE_KEY, DEFAULTS);
-if (!Array.isArray(config.clocks)) {
-  const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  config.clocks = local ? [canonical(local)] : [];
-}
+if (!Array.isArray(config.clocks)) config.clocks = LOCAL_ZONE ? [LOCAL_ZONE] : [];
 config.clocks = config.clocks.filter((id, i, a) => a.indexOf(id) === i).slice(0, MAX_CLOCKS);
 const save = () => saveConfig(STORAGE_KEY, config);
 
 // ---- Elements --------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const el = {
-  card: $("card"), fit: $("fit"), clocks: $("clocks"), empty: $("empty"),
-  add: $("btn-add"), settings: $("btn-settings"), close: $("btn-close"),
+  card: $("card"), fit: $("fit"), clocks: $("clocks"),
   searchPanel: $("search"), searchInput: $("search-input"), searchResults: $("search-results"),
+  clockPanel: $("clock-panel"), clockName: $("clock-panel-name"), removeClock: $("btn-remove-clock"),
   settingsPanel: $("settings"),
-  layout: $("opt-layout"), size: $("opt-size"), sizeVal: $("size-val"), opacity: $("opt-opacity"),
+  layout: $("opt-layout"), size: $("opt-size"), opacity: $("opt-opacity"),
   h24: $("opt-24h"), seconds: $("opt-seconds"), offset: $("opt-offset"), top: $("opt-top"),
 };
 
-const panels = createPanels(el.searchPanel, el.settingsPanel);
+const panels = createPanels();
 const { fit, resizeWindowToContent, autoSizeOnce } = createFit({
-  fitEl: el.fit, contentEl: el.clocks, hasContent: () => config.clocks.length > 0, sizedKey: "worldclock.sized.v1",
+  fitEl: el.fit, contentEl: el.clocks, sizedKey: "worldclock.sized.v1",
 });
 
 // ---- Time formatting -------------------------------------------------
@@ -79,7 +79,6 @@ function formatters(zoneId) {
   if (config.seconds) timeOpts.second = "2-digit";
   f = {
     time: new Intl.DateTimeFormat(undefined, timeOpts),
-    date: new Intl.DateTimeFormat(undefined, { timeZone: zoneId, weekday: "short", day: "numeric", month: "short" }),
     numeric: new Intl.DateTimeFormat("en-US", {
       timeZone: zoneId, hourCycle: "h23",
       year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
@@ -89,20 +88,34 @@ function formatters(zoneId) {
   return f;
 }
 
-function zoneOffsetMinutes(numericFmt, now) {
+/** The wall-clock fields of `now` in the clock's zone. */
+function zoneParts(numericFmt, now) {
   const p = {};
-  for (const part of numericFmt.formatToParts(now)) p[part.type] = part.value;
-  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  for (const part of numericFmt.formatToParts(now)) p[part.type] = +part.value;
+  return p;
+}
+
+function offsetMinutes(parts, now) {
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second);
   return Math.round((asUtc - Math.floor(now.getTime() / 1000) * 1000) / 60000);
 }
 
-function zoneHour(numericFmt, now) {
-  const part = numericFmt.formatToParts(now).find((x) => x.type === "hour");
-  return part ? +part.value % 24 : 12;
+/** -1 = the clock's date is yesterday for you, 0 = same day, 1 = tomorrow. */
+function dayDifference(parts, now) {
+  const zoneDay = Date.UTC(parts.year, parts.month - 1, parts.day);
+  const localDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((zoneDay - localDay) / 86400000);
+}
+
+function dayLabel(diff) {
+  if (diff === 0) return "";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  return diff > 0 ? "In " + diff + " days" : Math.abs(diff) + " days ago";
 }
 
 function offsetText(diffMin) {
-  if (diffMin === 0) return "same time as local";
+  if (diffMin === 0) return "same time as you";
   const sign = diffMin > 0 ? "+" : "−";
   const abs = Math.abs(diffMin);
   const h = Math.floor(abs / 60);
@@ -123,27 +136,35 @@ function renderClocks() {
     const zone = zoneFor(id);
     const root = document.createElement("div");
     root.className = "clock";
+    root.tabIndex = 0;
+    root.setAttribute("role", "button");
+    root.dataset.id = id;
+    root.setAttribute("aria-label", zone.city + " clock. Activate for options.");
     root.innerHTML =
-      '<div class="top"><span class="icon"></span><span class="city"></span>' +
-      '<button class="remove" title="Remove clock" aria-label="Remove clock">&times;</button></div>' +
-      '<div class="time"></div><div class="sub"></div>';
-    root.querySelector(".city").textContent = zone.city + (zone.country ? ", " + zone.country : "");
-    root.title = zone.id;
+      '<div class="top"><span class="icon"></span><span class="city"></span></div>' +
+      '<div class="time"></div><div class="sub" hidden></div>';
+    root.querySelector(".city").textContent = zone.city; // the country is in the search results and the tooltip
+    root.title = zone.city + (zone.country ? ", " + zone.country : "");
     el.clocks.appendChild(root);
     return {
-      id, time: root.querySelector(".time"), sub: root.querySelector(".sub"),
+      id, isLocal: canonical(id) === LOCAL_ZONE,
+      time: root.querySelector(".time"), sub: root.querySelector(".sub"),
       icon: root.querySelector(".icon"), lastIcon: "",
     };
   });
-  el.empty.hidden = config.clocks.length > 0;
-  el.add.disabled = config.clocks.length >= MAX_CLOCKS;
-  el.add.title = el.add.disabled ? "Maximum of " + MAX_CLOCKS + " clocks" : "Add clock";
+  if (config.clocks.length < MAX_CLOCKS) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.id = "add-tile";
+    tile.className = "add-tile";
+    tile.textContent = config.clocks.length ? "+ Add clock" : "+ Add a clock";
+    el.clocks.appendChild(tile);
+  }
   tick();
 }
 
 function tick() {
   const now = new Date();
-  const localOffset = -now.getTimezoneOffset();
   for (const n of nodes) {
     const f = formatters(n.id);
     const parts = f.time.formatToParts(now);
@@ -152,12 +173,17 @@ function tick() {
     const timeHtml = period ? main + "<small>" + period.value.toUpperCase() + "</small>" : main;
     if (n.time.dataset.v !== timeHtml) { n.time.dataset.v = timeHtml; n.time.innerHTML = timeHtml; }
 
-    let sub = f.date.format(now);
-    if (config.offset) sub += " · " + offsetText(zoneOffsetMinutes(f.numeric, now) - localOffset);
-    if (n.sub.textContent !== sub) n.sub.textContent = sub;
+    // The date is only worth a line when it differs from yours ("Tomorrow").
+    const zp = zoneParts(f.numeric, now);
+    const bits = [];
+    const label = dayLabel(dayDifference(zp, now));
+    if (label) bits.push(label);
+    if (n.isLocal) bits.push('<span class="tag">Your time</span>');
+    else if (config.offset) bits.push(offsetText(offsetMinutes(zp, now) + now.getTimezoneOffset()));
+    const html = bits.join(" · ");
+    if (n.sub.dataset.v !== html) { n.sub.dataset.v = html; n.sub.innerHTML = html; n.sub.hidden = !html; }
 
-    const h = zoneHour(f.numeric, now);
-    const day = h >= 6 && h < 18;
+    const day = zp.hour % 24 >= 6 && zp.hour % 24 < 18;
     const iconKey = day ? "sun" : "moon";
     if (n.lastIcon !== iconKey) { n.lastIcon = iconKey; n.icon.innerHTML = day ? SUN : MOON; }
   }
@@ -188,9 +214,13 @@ function addClock(id) {
   reflow(true);
 }
 
-function removeClock(id) {
-  config.clocks = config.clocks.filter((c) => c !== id);
+let selectedId = null;
+function removeSelected() {
+  if (!selectedId) return;
+  config.clocks = config.clocks.filter((c) => c !== selectedId);
+  selectedId = null;
   save();
+  panels.closeAll();
   reflow(true);
 }
 
@@ -254,11 +284,20 @@ function openSearch() {
   }
 }
 
+function openClockOptions(id) {
+  selectedId = id;
+  const zone = zoneFor(id);
+  el.clockName.textContent = zone.city + (zone.country ? ", " + zone.country : "");
+  panels.toggle(el.clockPanel);
+}
+
 // ---- Wiring ----------------------------------------------------------
+const layoutPicker = bindSegmented(el.layout, LAYOUTS, (value) => { config.layout = value; save(); reflow(true); });
+const sizePicker = bindSegmented(el.size, SIZES, (value) => { config.size = value; applyStyle(); save(); reflow(true); });
+
 function syncSettingsUi() {
-  el.layout.value = config.layout;
-  el.size.value = config.size;
-  el.sizeVal.textContent = config.size + " px";
+  layoutPicker.set(config.layout);
+  sizePicker.set(config.size);
   el.opacity.value = config.opacity;
   el.h24.checked = config.hour24;
   el.seconds.checked = config.seconds;
@@ -267,9 +306,23 @@ function syncSettingsUi() {
 }
 
 function wire() {
-  setupChrome({ card: el.card, closeButton: el.close, onBackgroundPress: panels.closeAll });
-  el.add.addEventListener("click", openSearch);
-  el.settings.addEventListener("click", () => panels.toggle(el.settingsPanel));
+  [el.searchPanel, el.clockPanel, el.settingsPanel].forEach(panels.add);
+  mountChrome({
+    card: el.card, panels, name: "World Clock",
+    items: [{ id: "settings", label: "Settings", action: () => panels.toggle(el.settingsPanel) }],
+  });
+
+  // Tap a clock for its options; tap the dashed tile to add one. No hover needed.
+  el.clocks.addEventListener("click", (e) => {
+    if (e.target.closest("#add-tile")) { openSearch(); return; }
+    const clock = e.target.closest(".clock");
+    if (clock) openClockOptions(clock.dataset.id);
+  });
+  el.clocks.addEventListener("keydown", (e) => {
+    const clock = e.target.closest(".clock");
+    if (clock && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openClockOptions(clock.dataset.id); }
+  });
+  el.removeClock.addEventListener("click", removeSelected);
 
   el.searchInput.addEventListener("input", runSearch);
   el.searchInput.addEventListener("keydown", (e) => {
@@ -278,25 +331,11 @@ function wire() {
     else if (e.key === "Enter" && results[active]) addClock(results[active].id);
   });
 
-  el.layout.addEventListener("change", () => { config.layout = el.layout.value; save(); reflow(true); });
-  el.size.addEventListener("input", () => {
-    config.size = +el.size.value; el.sizeVal.textContent = config.size + " px";
-    applyStyle(); save(); fit();
-  });
-  el.size.addEventListener("change", () => resizeWindowToContent());
   el.opacity.addEventListener("input", () => { config.opacity = +el.opacity.value; applyStyle(); save(); });
   el.h24.addEventListener("change", () => { config.hour24 = el.h24.checked; save(); reflow(true); });
   el.seconds.addEventListener("change", () => { config.seconds = el.seconds.checked; save(); reflow(true); });
   el.offset.addEventListener("change", () => { config.offset = el.offset.checked; save(); reflow(true); });
   el.top.addEventListener("change", () => { config.alwaysOnTop = el.top.checked; save(); applyAlwaysOnTop(config.alwaysOnTop); });
-
-  // Each clock has its own hover "x" to remove it.
-  el.clocks.addEventListener("click", (e) => {
-    const btn = e.target.closest(".remove");
-    if (!btn) return;
-    const i = [...el.clocks.children].indexOf(btn.closest(".clock"));
-    if (i >= 0) removeClock(config.clocks[i]);
-  });
 }
 
 // ---- Start -----------------------------------------------------------

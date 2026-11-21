@@ -15,7 +15,8 @@ globalThis.localStorage = {
   getItem: (k) => (store.has(k) ? store.get(k) : null),
   setItem: (k, v) => store.set(k, String(v)),
 };
-globalThis.ResizeObserver = class { observe() {} };
+const observed = [];
+globalThis.ResizeObserver = class { observe(node) { observed.push(node); } };
 globalThis.document = { addEventListener() {} };
 globalThis.window = {
   __TAURI__: {
@@ -24,7 +25,7 @@ globalThis.window = {
   },
 };
 
-const { createFit, PADDING } = await import("../src/shared/widget.js");
+const { createFit, PADDING, WINDOW_EXTRA } = await import("../src/shared/widget.js");
 
 const fakeEl = (props) => ({ style: {}, ...props });
 function makeFit({ hasContent = true, sizedKey = "test.sized.v1" } = {}) {
@@ -33,12 +34,12 @@ function makeFit({ hasContent = true, sizedKey = "test.sized.v1" } = {}) {
   return { content, ...createFit({ fitEl, contentEl: content, hasContent: () => hasContent, sizedKey }) };
 }
 
-beforeEach(() => { setSizeCalls.length = 0; store.clear(); });
+beforeEach(() => { setSizeCalls.length = 0; store.clear(); observed.length = 0; });
 
 test("first launch sizes the window to its content, exactly once", async () => {
   const f = makeFit();
   await f.autoSizeOnce();
-  assert.deepEqual(setSizeCalls, [[200 + PADDING * 2, 100 + PADDING * 2]]);
+  assert.deepEqual(setSizeCalls, [[200 + WINDOW_EXTRA, 100 + WINDOW_EXTRA]]);
   await f.autoSizeOnce(); // e.g. a data refresh re-rendering
   await f.autoSizeOnce();
   assert.equal(setSizeCalls.length, 1, "later renders must not resize the window");
@@ -80,4 +81,23 @@ test("each widget has its own first-time flag", async () => {
   await makeFit({ sizedKey: "a.sized.v1" }).autoSizeOnce();
   await makeFit({ sizedKey: "b.sized.v1" }).autoSizeOnce();
   assert.equal(setSizeCalls.length, 2);
+});
+
+test("the scale is recalculated when the content changes size, not only when the window does", () => {
+  const f = makeFit();
+  assert.ok(observed.includes(f.content), "the content element is observed (e.g. a clock gains a 'Tomorrow' line)");
+  assert.equal(observed.length, 2, "the window area and the content");
+});
+
+test("the window is sized so the content fits at 100%, border included (it used to come out 2px short, i.e. ~98%)", async () => {
+  // The card has a 1px border on each side, and the fit area sits inside it.
+  assert.equal(WINDOW_EXTRA, PADDING * 2 + 2);
+  const content = fakeEl({ offsetWidth: 200, offsetHeight: 100 });
+  const sized = [];
+  window.__TAURI__.window.getCurrentWindow = () => ({ label: "t", setSize: async (s) => sized.push([s.width, s.height]) });
+  // After the window has been sized, the fit area is the window minus the border.
+  const fitEl = fakeEl({ clientWidth: 200 + WINDOW_EXTRA - 2, clientHeight: 100 + WINDOW_EXTRA - 2 });
+  const f = createFit({ fitEl, contentEl: content, sizedKey: "scale.sized.v1" });
+  await f.resizeWindowToContent();
+  assert.equal(content.style.transform, "scale(1)", "content shown at full size, not 0.98");
 });
