@@ -1,3 +1,4 @@
+mod autostart;
 mod battery;
 
 use std::{collections::HashMap, sync::Mutex};
@@ -7,7 +8,6 @@ use tauri::{
     tray::TrayIconBuilder,
     AppHandle, Manager, Wry,
 };
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 /// Every widget window: (window label, tray menu title).
 /// A widget only appears in the tray menu if its window exists in tauri.conf.json.
@@ -47,6 +47,29 @@ fn toggle_widget(app: &AppHandle, label: &str) {
     sync_tray_items(app);
 }
 
+/// A second copy of the app was started: it exits, and the copy already running shows its
+/// widgets instead (so a second launch never produces a second set of windows or tray icons).
+fn reveal_widgets(app: &AppHandle) {
+    let mut any_visible = false;
+    for (label, _) in WIDGETS {
+        if let Some(w) = app.get_webview_window(label) {
+            if w.is_visible().unwrap_or(false) {
+                any_visible = true;
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }
+    }
+    if !any_visible {
+        // Every widget was hidden: bring back the default one.
+        if let Some(w) = app.get_webview_window("world-clock") {
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+    }
+    sync_tray_items(app);
+}
+
 /// Called by a widget's close button: hide the window (the app keeps running in the tray).
 #[tauri::command]
 fn hide_widget(app: AppHandle, label: String) {
@@ -76,10 +99,9 @@ async fn get_batteries() -> battery::BatteryReport {
 
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            None::<Vec<&'static str>>,
-        ))
+        // Must be registered first. A second launch (two start-at-login entries, Windows
+        // reopening apps, a double click) exits at once and calls this in the running copy.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| reveal_widgets(app)))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(TrayState::default())
         .invoke_handler(tauri::generate_handler![hide_widget, sync_tray, get_batteries])
@@ -101,7 +123,8 @@ pub fn run() {
             }
 
             menu.append(&PredefinedMenuItem::separator(handle)?)?;
-            let autostart_on = app.autolaunch().is_enabled().unwrap_or(false);
+            let app_name = app.package_info().name.clone();
+            let autostart_on = autostart::is_enabled_for_user(&app_name);
             let autostart =
                 CheckMenuItem::with_id(handle, "autostart", "Launch at login", true, autostart_on, None::<&str>)?;
             menu.append(&autostart)?;
@@ -115,13 +138,13 @@ pub fn run() {
                 .on_menu_event(move |app, event| match event.id.as_ref() {
                     "quit" => app.exit(0),
                     "autostart" => {
-                        let launcher = app.autolaunch();
-                        if launcher.is_enabled().unwrap_or(false) {
-                            let _ = launcher.disable();
-                        } else {
-                            let _ = launcher.enable();
+                        // Per-user only, so it never leaves a machine-wide entry behind.
+                        if autostart::is_enabled_for_user(&app_name) {
+                            let _ = autostart::disable_for_user(&app_name);
+                        } else if let Ok(exe) = std::env::current_exe() {
+                            let _ = autostart::enable_for_user(&app_name, &exe);
                         }
-                        let _ = autostart_item.set_checked(launcher.is_enabled().unwrap_or(false));
+                        let _ = autostart_item.set_checked(autostart::is_enabled_for_user(&app_name));
                     }
                     label => toggle_widget(app, label),
                 })

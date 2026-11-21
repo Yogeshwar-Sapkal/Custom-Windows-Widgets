@@ -34,4 +34,16 @@ npm run build   # build the installer
 npm test        # regression tests (Node built-in runner, no extra packages)
 ```
 
+Rust tests: `cd src-tauri && cargo test --lib`. On Linux, `tests/double-launch.sh` launches the built app twice on a virtual display and checks that the second launch does not open a second set of widgets (needs Xvfb, xdotool and dbus-run-session).
+
+## Start at login
+
+The tray menu's **Launch at login** writes only the current user's startup entry (`HKCU\...\Run`); it never writes the machine-wide one. Only one copy of the app can run: starting it again (a second startup entry, Windows reopening apps, a double click) just brings the running copy's widgets forward.
+
+If an older version left a machine-wide entry behind, remove it once from an administrator PowerShell (it only launches a harmless second copy that exits, but it is no longer needed):
+
+```powershell
+Remove-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'World Clock'
+```
+
 The UI is plain HTML/CSS/JS in `src/` (native ES modules, no bundler): shared code in `src/shared/`, one folder per widget in `src/widgets/`. `src/widgets/world-clock/zones.js` is generated from the IANA tz database with `npm run zones` (needs Python 3 and a tz database).
